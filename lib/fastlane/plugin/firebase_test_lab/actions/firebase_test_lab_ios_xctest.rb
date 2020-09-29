@@ -34,44 +34,45 @@ module Fastlane
         gcs_workfolder = generate_directory_name
 
         # Firebase Test Lab requires an app bundle be already on Google Cloud Storage before starting the job
-        if params[:app_path].to_s.start_with?("gs://")
-          # gs:// is a path on Google Cloud Storage, we do not need to re-upload the app to a different bucket
-          app_gcs_link = params[:app_path]
-        else
+        # if params[:app_path].to_s.start_with?("gs://")
+        #   # gs:// is a path on Google Cloud Storage, we do not need to re-upload the app to a different bucket
+        #   app_gcs_link = params[:app_path]
+        # else
 
-          if params[:skip_validation]
-            UI.message("Skipping validation of app.")
-          else
-            FirebaseTestLab::IosValidator.validate_ios_app(params[:app_path])
-          end
+        #   if params[:skip_validation]
+        #     UI.message("Skipping validation of app.")
+        #   else
+        #     FirebaseTestLab::IosValidator.validate_ios_app(params[:app_path])
+        #   end
 
-          # When given a local path, we upload the app bundle to Google Cloud Storage
-          upload_spinner = TTY::Spinner.new("[:spinner] Uploading the app to GCS...", format: :dots)
-          upload_spinner.auto_spin
-          upload_bucket_name = ftl_service.get_default_bucket(gcp_project)
-          timeout = gcp_requests_timeout ? gcp_requests_timeout.to_i : nil
-          app_gcs_link = upload_file(params[:app_path],
-                                     upload_bucket_name,
-                                     "#{gcs_workfolder}/#{DEFAULT_APP_BUNDLE_NAME}",
-                                     gcp_project,
-                                     gcp_credential,
-                                     timeout)
-          upload_spinner.success("Done")
-        end
+        #   # When given a local path, we upload the app bundle to Google Cloud Storage
+        #   upload_spinner = TTY::Spinner.new("[:spinner] Uploading the app to GCS...", format: :dots)
+        #   upload_spinner.auto_spin
+        #   upload_bucket_name = ftl_service.get_default_bucket(gcp_project)
+        #   timeout = gcp_requests_timeout ? gcp_requests_timeout.to_i : nil
+        #   app_gcs_link = upload_file(params[:app_path],
+        #                              upload_bucket_name,
+        #                              "#{gcs_workfolder}/#{DEFAULT_APP_BUNDLE_NAME}",
+        #                              gcp_project,
+        #                              gcp_credential,
+        #                              timeout)
+        #   upload_spinner.success("Done")
+        # end
 
-        UI.message("Submitting job(s) to Firebase Test Lab")
+        # UI.message("Submitting job(s) to Firebase Test Lab")
         
         result_storage = (params[:result_storage] ||
           "gs://#{ftl_service.get_default_bucket(gcp_project)}/#{gcs_workfolder}")
         UI.message("Test Results bucket: #{result_storage}")
         
         # We have gathered all the information. Call Firebase Test Lab to start the job now
-        matrix_id = ftl_service.start_job(gcp_project,
-                                          app_gcs_link,
-                                          result_storage,
-                                          params[:devices],
-                                          params[:timeout_sec],
-                                          params[:gcp_additional_client_info])
+        # matrix_id = ftl_service.start_job(gcp_project,
+        #                                   app_gcs_link,
+        #                                   result_storage,
+        #                                   params[:devices],
+        #                                   params[:timeout_sec],
+        #                                   params[:gcp_additional_client_info])
+matrix_id = "matrix-neze8iacti7na"
 
         # In theory, matrix_id should be available. Keep it to catch unexpected Firebase Test Lab API response
         if matrix_id.nil?
@@ -146,7 +147,12 @@ module Fastlane
               UI.abort_with_message!("Unexpected response from Firebase test lab: No history or execution ID")
             end
             test_results = ftl_service.get_execution_steps(gcp_project, history_id, execution_id)
-            tests_successful = extract_test_results(test_results, gcp_project, history_id, execution_id)
+#ENVIRONMENT dimension: [{"key"=>"Model", "value"=>"ipad5"}, {"key"=>"Version", "value"=>"12.0"}, {"key"=>"Locale", "value"=>"it_IT"}, {"key"=>"Orientation", "value"=>"landscape"}]
+#ENVIRONMENT result: {"state"=>"complete", "outcome"=>{"summary"=>"success"}, "testSuiteOverviews"=>[{"xmlSource"=>{}, "totalCount"=>9, "name"=>"CatawikiUITests", "elapsedTime"=>{"seconds"=>"175", "nanos"=>150000000}}]}
+
+#ENVIRONMENT dimension: [{"key"=>"Model", "value"=>"iphone11"}, {"key"=>"Version", "value"=>"13.6"}, {"key"=>"Locale", "value"=>"nl_NL"}, {"key"=>"Orientation", "value"=>"portrait"}]
+#ENVIRONMENT result: {"state"=>"complete", "outcome"=>{"summary"=>"failure"}, "testSuiteOverviews"=>[{"xmlSource"=>{}, "totalCount"=>9, "failureCount"=>4, "name"=>"CatawikiUITests", "elapsedTime"=>{"seconds"=>"113", "nanos"=>525000000}}]}              
+            tests_successful = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
             download_files(result_storage, params)
             unless executions_completed && tests_successful
               UI.test_failure!("Tests failed. " \
@@ -213,7 +219,7 @@ module Fastlane
         return failures == 0
       end
 
-      def self.extract_test_results(test_results, gcp_project, history_id, execution_id)
+      def self.extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
         steps = test_results["steps"]
         failures = 0
         inconclusive_runs = 0
@@ -224,6 +230,32 @@ module Fastlane
           UI.message("-------------------------")
           step_id = step["stepId"]
           UI.message("Test step: #{step_id}")
+
+          device = "Device:"
+          dimensionValues = step["dimensionValue"]
+          UI.message("---- Teststep: #{dimensionValues}")
+          dimensionValues.each do |dimensionValue|
+            name = dimensionValue["key"]
+            value = dimensionValue["value"]
+            UI.message("DIMENSION name: #{name}")
+            UI.message("DIMENSION value: #{value}")
+            device += " " + value
+          end
+          UI.message("#{device}")
+
+          test_cases = ftl_service.get_execution_test_cases(gcp_project, history_id, execution_id, step_id)
+
+          failureTests = "Failed tests:"
+          testCases = test_cases["testCases"]
+          testCases.each do |testCase|
+            name = testCase["testCaseReference"]["name"]
+            status = testCase["status"]
+            UI.message("Testcase name: #{name}")
+            UI.message("Testcase status: #{status}")
+            if status == "failure"
+              failureTests = " " + name
+            end
+          end
 
           run_duration_sec = step["runDuration"]["seconds"] || 0
           UI.message("Execution time: #{run_duration_sec} seconds")
@@ -240,6 +272,7 @@ module Fastlane
           when "failure"
             failures += 1
             UI.error("Result: #{outcome}")
+            #UI.error("failureDetail: #{failureDetail}")
           end
           UI.message("For details, go to https://console.firebase.google.com/project/#{gcp_project}/testlab/" \
             "histories/#{history_id}/matrices/#{execution_id}/executions/#{step_id}")
