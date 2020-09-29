@@ -233,12 +233,8 @@ matrix_id = "matrix-neze8iacti7na"
 
           device = "Device:"
           dimensionValues = step["dimensionValue"]
-          UI.message("---- Teststep: #{dimensionValues}")
           dimensionValues.each do |dimensionValue|
-            name = dimensionValue["key"]
             value = dimensionValue["value"]
-            UI.message("DIMENSION name: #{name}")
-            UI.message("DIMENSION value: #{value}")
             device += " " + value
           end
           UI.message("#{device}")
@@ -250,12 +246,13 @@ matrix_id = "matrix-neze8iacti7na"
           testCases.each do |testCase|
             name = testCase["testCaseReference"]["name"]
             status = testCase["status"]
-            UI.message("Testcase name: #{name}")
-            UI.message("Testcase status: #{status}")
-            if status == "failure"
-              failureTests = " " + name
+            #UI.message("Testcase name: #{name}")
+            #UI.message("Testcase status: #{status}")
+            if status == "failed"
+              failureTests += " " + name
             end
           end
+          UI.message(failureTests)
 
           run_duration_sec = step["runDuration"]["seconds"] || 0
           UI.message("Execution time: #{run_duration_sec} seconds")
