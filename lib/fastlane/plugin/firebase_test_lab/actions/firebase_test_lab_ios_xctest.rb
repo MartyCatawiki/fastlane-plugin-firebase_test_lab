@@ -72,7 +72,10 @@ module Fastlane
         #                                   params[:devices],
         #                                   params[:timeout_sec],
         #                                   params[:gcp_additional_client_info])
-matrix_id = "matrix-neze8iacti7na"
+matrix_id = "matrix-28xxfw6rt48kb"
+#matrix_id = "matrix-2n0691yg1ro15"
+#matrix_id = "matrix-neze8iacti7na"
+#matrix_id = "matrix-b0pyxr0raiz1a"
 
         # In theory, matrix_id should be available. Keep it to catch unexpected Firebase Test Lab API response
         if matrix_id.nil?
@@ -147,12 +150,11 @@ matrix_id = "matrix-neze8iacti7na"
               UI.abort_with_message!("Unexpected response from Firebase test lab: No history or execution ID")
             end
             test_results = ftl_service.get_execution_steps(gcp_project, history_id, execution_id)
-            tests_successful, failure_msg = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
+            tests_successful, failureDictionary = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
             download_files(result_storage, params)
             unless executions_completed && tests_successful
-              UI.test_failure!("Tests failed. \n" +
-                failure_msg +
-                "Go to #{firebase_console_link} for more information about this run")
+              failureDictionary["FTL link"] = "Go to #{firebase_console_link} for more information about this run"
+              UI.test_failure!(failureDictionary)
             end
             return
           end
@@ -219,7 +221,7 @@ matrix_id = "matrix-neze8iacti7na"
         steps = test_results["steps"]
         failures = 0
         inconclusive_runs = 0
-        failureSummary = ""
+        failureDictionary = {}        
 
         UI.message("-------------------------")
         UI.message("|      TEST OUTCOME     |")
@@ -228,28 +230,34 @@ matrix_id = "matrix-neze8iacti7na"
           step_id = step["stepId"]
           UI.message("Test step: #{step_id}")
 
-          device = "Device:"
+          device = ""
           dimensionValues = step["dimensionValue"]
           dimensionValues.each do |dimensionValue|
             value = dimensionValue["value"]
-            device += " " + value
+            device += value + " "
           end
+          device.strip()
           UI.message("#{device}")
 
           test_cases = ftl_service.get_execution_test_cases(gcp_project, history_id, execution_id, step_id)
 
-          failureTests = "Failed tests:"
+          testCaseSummary = ""
           testCases = test_cases["testCases"]
-          testCases.each do |testCase|
-            name = testCase["testCaseReference"]["name"]
-            status = testCase["status"]
-            #UI.message("Testcase name: #{name}")
-            #UI.message("Testcase status: #{status}")
-            if status == "failed"
-              failureTests += " " + name
+          if !testCases.nil?
+            testCases.each do |testCase|
+              name = testCase["testCaseReference"]["name"]
+              status = testCase["status"]
+              UI.success("STATUS: [#{status}]")
+              if status.nil? 
+                testCaseSummary += ":white_check_mark: " + name + "\n"
+              else
+                testCaseSummary += ":fire: " + name + "\n"
+              end
             end
+          else 
+            testCaseSummary += ":question: No test cases :question:"
           end
-          UI.message(failureTests)
+          UI.message(testCaseSummary)
 
           run_duration_sec = step["runDuration"]["seconds"] || 0
           UI.message("Execution time: #{run_duration_sec} seconds")
@@ -263,10 +271,11 @@ matrix_id = "matrix-neze8iacti7na"
           when "inconclusive"
             inconclusive_runs += 1
             UI.error("Result: #{outcome}")
+            failureDictionary[device] = testCaseSummary
           when "failure"
             failures += 1
             UI.error("Result: #{outcome}")
-            failureSummary += device + "\n" + failureTests + "\n"
+            failureDictionary[device] = testCaseSummary
           end
           UI.message("For details, go to https://console.firebase.google.com/project/#{gcp_project}/testlab/" \
             "histories/#{history_id}/matrices/#{execution_id}/executions/#{step_id}")
@@ -278,12 +287,11 @@ matrix_id = "matrix-neze8iacti7na"
         end
         if failures > 0
           UI.error("😞  #{failures} step(s) have failed.")
-          UI.error(failureSummary)
         end
         if inconclusive_runs > 0
           UI.error("😞  #{inconclusive_runs} step(s) yielded inconclusive outcomes.")
         end
-        return (failures == 0 && inconclusive_runs == 0), failureSummary
+        return (failures == 0 && inconclusive_runs == 0), failureDictionary
       end
 
       def self.download_files(result_storage, params)
