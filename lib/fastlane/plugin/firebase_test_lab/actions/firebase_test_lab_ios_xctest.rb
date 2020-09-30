@@ -147,15 +147,11 @@ matrix_id = "matrix-neze8iacti7na"
               UI.abort_with_message!("Unexpected response from Firebase test lab: No history or execution ID")
             end
             test_results = ftl_service.get_execution_steps(gcp_project, history_id, execution_id)
-#ENVIRONMENT dimension: [{"key"=>"Model", "value"=>"ipad5"}, {"key"=>"Version", "value"=>"12.0"}, {"key"=>"Locale", "value"=>"it_IT"}, {"key"=>"Orientation", "value"=>"landscape"}]
-#ENVIRONMENT result: {"state"=>"complete", "outcome"=>{"summary"=>"success"}, "testSuiteOverviews"=>[{"xmlSource"=>{}, "totalCount"=>9, "name"=>"CatawikiUITests", "elapsedTime"=>{"seconds"=>"175", "nanos"=>150000000}}]}
-
-#ENVIRONMENT dimension: [{"key"=>"Model", "value"=>"iphone11"}, {"key"=>"Version", "value"=>"13.6"}, {"key"=>"Locale", "value"=>"nl_NL"}, {"key"=>"Orientation", "value"=>"portrait"}]
-#ENVIRONMENT result: {"state"=>"complete", "outcome"=>{"summary"=>"failure"}, "testSuiteOverviews"=>[{"xmlSource"=>{}, "totalCount"=>9, "failureCount"=>4, "name"=>"CatawikiUITests", "elapsedTime"=>{"seconds"=>"113", "nanos"=>525000000}}]}              
-            tests_successful = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
+            tests_successful, failure_msg = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
             download_files(result_storage, params)
             unless executions_completed && tests_successful
-              UI.test_failure!("Tests failed. " \
+              UI.test_failure!("Tests failed. \n" +
+                failure_msg +
                 "Go to #{firebase_console_link} for more information about this run")
             end
             return
@@ -223,6 +219,7 @@ matrix_id = "matrix-neze8iacti7na"
         steps = test_results["steps"]
         failures = 0
         inconclusive_runs = 0
+        failureSummary = ""
 
         UI.message("-------------------------")
         UI.message("|      TEST OUTCOME     |")
@@ -269,7 +266,7 @@ matrix_id = "matrix-neze8iacti7na"
           when "failure"
             failures += 1
             UI.error("Result: #{outcome}")
-            #UI.error("failureDetail: #{failureDetail}")
+            failureSummary += device + "\n" + failureTests + "\n"
           end
           UI.message("For details, go to https://console.firebase.google.com/project/#{gcp_project}/testlab/" \
             "histories/#{history_id}/matrices/#{execution_id}/executions/#{step_id}")
@@ -281,11 +278,12 @@ matrix_id = "matrix-neze8iacti7na"
         end
         if failures > 0
           UI.error("😞  #{failures} step(s) have failed.")
+          UI.error(failureSummary)
         end
         if inconclusive_runs > 0
           UI.error("😞  #{inconclusive_runs} step(s) yielded inconclusive outcomes.")
         end
-        return failures == 0 && inconclusive_runs == 0
+        return (failures == 0 && inconclusive_runs == 0), failureSummary
       end
 
       def self.download_files(result_storage, params)
