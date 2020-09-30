@@ -34,48 +34,44 @@ module Fastlane
         gcs_workfolder = generate_directory_name
 
         # Firebase Test Lab requires an app bundle be already on Google Cloud Storage before starting the job
-        # if params[:app_path].to_s.start_with?("gs://")
-        #   # gs:// is a path on Google Cloud Storage, we do not need to re-upload the app to a different bucket
-        #   app_gcs_link = params[:app_path]
-        # else
+        if params[:app_path].to_s.start_with?("gs://")
+          # gs:// is a path on Google Cloud Storage, we do not need to re-upload the app to a different bucket
+          app_gcs_link = params[:app_path]
+        else
 
-        #   if params[:skip_validation]
-        #     UI.message("Skipping validation of app.")
-        #   else
-        #     FirebaseTestLab::IosValidator.validate_ios_app(params[:app_path])
-        #   end
+          if params[:skip_validation]
+            UI.message("Skipping validation of app.")
+          else
+            FirebaseTestLab::IosValidator.validate_ios_app(params[:app_path])
+          end
 
-        #   # When given a local path, we upload the app bundle to Google Cloud Storage
-        #   upload_spinner = TTY::Spinner.new("[:spinner] Uploading the app to GCS...", format: :dots)
-        #   upload_spinner.auto_spin
-        #   upload_bucket_name = ftl_service.get_default_bucket(gcp_project)
-        #   timeout = gcp_requests_timeout ? gcp_requests_timeout.to_i : nil
-        #   app_gcs_link = upload_file(params[:app_path],
-        #                              upload_bucket_name,
-        #                              "#{gcs_workfolder}/#{DEFAULT_APP_BUNDLE_NAME}",
-        #                              gcp_project,
-        #                              gcp_credential,
-        #                              timeout)
-        #   upload_spinner.success("Done")
-        # end
+          # When given a local path, we upload the app bundle to Google Cloud Storage
+          upload_spinner = TTY::Spinner.new("[:spinner] Uploading the app to GCS...", format: :dots)
+          upload_spinner.auto_spin
+          upload_bucket_name = ftl_service.get_default_bucket(gcp_project)
+          timeout = gcp_requests_timeout ? gcp_requests_timeout.to_i : nil
+          app_gcs_link = upload_file(params[:app_path],
+                                     upload_bucket_name,
+                                     "#{gcs_workfolder}/#{DEFAULT_APP_BUNDLE_NAME}",
+                                     gcp_project,
+                                     gcp_credential,
+                                     timeout)
+          upload_spinner.success("Done")
+        end
 
-        # UI.message("Submitting job(s) to Firebase Test Lab")
+        UI.message("Submitting job(s) to Firebase Test Lab")
         
         result_storage = (params[:result_storage] ||
           "gs://#{ftl_service.get_default_bucket(gcp_project)}/#{gcs_workfolder}")
         UI.message("Test Results bucket: #{result_storage}")
         
         # We have gathered all the information. Call Firebase Test Lab to start the job now
-        # matrix_id = ftl_service.start_job(gcp_project,
-        #                                   app_gcs_link,
-        #                                   result_storage,
-        #                                   params[:devices],
-        #                                   params[:timeout_sec],
-        #                                   params[:gcp_additional_client_info])
-matrix_id = "matrix-28xxfw6rt48kb"
-#matrix_id = "matrix-2n0691yg1ro15"
-#matrix_id = "matrix-neze8iacti7na"
-#matrix_id = "matrix-b0pyxr0raiz1a"
+        matrix_id = ftl_service.start_job(gcp_project,
+                                          app_gcs_link,
+                                          result_storage,
+                                          params[:devices],
+                                          params[:timeout_sec],
+                                          params[:gcp_additional_client_info])
 
         # In theory, matrix_id should be available. Keep it to catch unexpected Firebase Test Lab API response
         if matrix_id.nil?
@@ -247,7 +243,6 @@ matrix_id = "matrix-28xxfw6rt48kb"
             testCases.each do |testCase|
               name = testCase["testCaseReference"]["name"]
               status = testCase["status"]
-              UI.success("STATUS: [#{status}]")
               if status.nil? 
                 testCaseSummary += ":white_check_mark: " + name + "\n"
               else
