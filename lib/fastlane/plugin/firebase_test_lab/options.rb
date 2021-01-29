@@ -22,14 +22,16 @@ module Fastlane
                                        optional: true),
           FastlaneCore::ConfigItem.new(key: :ios_app_path,
                                        description: "Path to the app, either on the filesystem or GCS address (gs://)",
-                                       default_value:
-                                         Actions.lane_context[Actions::SharedValues::SCAN_ZIP_BUILD_PRODUCTS_PATH],
-                                       verify_block: proc do |value|
-                                         unless value.to_s.start_with?("gs://")
-                                           v = File.expand_path(value.to_s)
-                                           UI.user_error!("App file not found at path '#{v}'") unless File.exist?(v)
-                                         end
-                                       end),
+                                       default_value: nil,
+                                       optional: true),
+                                       # default_value:
+                                       #   Actions.lane_context[Actions::SharedValues::SCAN_ZIP_BUILD_PRODUCTS_PATH],
+                                       # verify_block: proc do |value|
+                                       #   unless value.to_s.start_with?("gs://")
+                                       #     v = File.expand_path(value.to_s)
+                                       #     UI.user_error!("App file not found at path '#{v}'") unless File.exist?(v)
+                                       #   end
+                                       # end),
           FastlaneCore::ConfigItem.new(key: :devices,
                                        description: "Devices to test the app on",
                                        type: Array,
