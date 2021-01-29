@@ -151,7 +151,7 @@ module Fastlane
                 },
                 testApk: {
                   gcsPath: test_app_path
-                }
+                },
                 orchestratorOption: OrchestratorOption.USE_ORCHESTRATOR
               }
             },
