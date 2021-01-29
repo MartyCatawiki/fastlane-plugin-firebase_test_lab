@@ -102,7 +102,7 @@ module Fastlane
           UI.abort_with_message!("No matrix ID received.")
         end
         UI.message("Matrix ID for this submission: #{matrix_id}")
-        wait_for_test_results(ftl_service, gcp_project, matrix_id, params, result_storage)
+        wait_for_test_results(ftl_service, gcp_project, matrix_id, params, result_storage, params[:print_successful_test])
       end
 
       def self.upload_file(app_path, bucket_name, gcs_path, gcp_project, gcp_credential, gcp_requests_timeout)
@@ -112,7 +112,7 @@ module Fastlane
         return file_name
       end
 
-      def self.wait_for_test_results(ftl_service, gcp_project, matrix_id, params, result_storage)
+      def self.wait_for_test_results(ftl_service, gcp_project, matrix_id, params, result_storage, print_successful_test)
         firebase_console_link = nil
 
         spinner = TTY::Spinner.new("[:spinner] Starting tests...", format: :dots)
@@ -170,7 +170,7 @@ module Fastlane
               UI.abort_with_message!("Unexpected response from Firebase test lab: No history or execution ID")
             end
             test_results = ftl_service.get_execution_steps(gcp_project, history_id, execution_id)
-            tests_successful, failureDictionary = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
+            tests_successful, failureDictionary = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id, print_successful_test)
             download_files(result_storage, params)
             unless executions_completed && tests_successful
               failureDictionary["FTL link"] = "Go to #{firebase_console_link} for more information about this run"
@@ -237,7 +237,7 @@ module Fastlane
         return failures == 0
       end
 
-      def self.extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id)
+      def self.extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id, print_successful_test)
         steps = test_results["steps"]
         failures = 0
         inconclusive_runs = 0
@@ -267,8 +267,10 @@ module Fastlane
             testCases.each do |testCase|
               name = testCase["testCaseReference"]["name"]
               status = testCase["status"]
-              if status.nil? 
+              if status.nil?
+                if print_successful_test
                 testCaseSummary += ":white_check_mark: " + name + "\n"
+                end
               else
                 testCaseSummary += ":fire: " + name + "\n"
               end

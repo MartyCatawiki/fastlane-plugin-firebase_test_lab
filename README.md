@@ -99,6 +99,7 @@ firebase_test_lab_ios_xctest(
 - `android_test_apk`: The path for your android test apk. Default: app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 - `extra_options`: Extra options that you need to pass to the gcloud command. Default: empty string
 - `retry_if_failed`: If set to true and a test failed, the test suite will be rerun once. Default: nil, no reruns
+- `print_successful_test`: If set to true all successful tests will be printed, by default only failed tests will be printed. Default: false, no successful tests printed
 
 ## Issues and Feedback
 

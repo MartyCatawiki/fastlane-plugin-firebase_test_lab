@@ -124,7 +124,11 @@ module Fastlane
                                        description: "Set to true if you want to rerun test sute when failed. Default: nil",
                                        is_string: false,
                                        optional: true,
-                                       default_value: nil)
+                                       default_value: nil),
+          FastlaneCore::ConfigItem.new(key: :print_successful_test,
+                                       description: "Set to true all successful tests will be printed. Default: nil",
+                                       default_value: false,
+                                       type: Fastlane::Boolean)
 
         ]
       end
