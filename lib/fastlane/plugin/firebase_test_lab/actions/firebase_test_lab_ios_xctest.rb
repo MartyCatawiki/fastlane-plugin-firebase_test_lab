@@ -271,7 +271,7 @@ module Fastlane
               status = testCase["status"]
               if status.nil?
                 if print_successful_test
-                testCaseSummary += ":white_check_mark: " + name + "\n"
+                  testCaseSummary += ":white_check_mark: " + name + "\n"
                 end
               else
                 testCaseSummary += ":fire: " + name + "\n"

@@ -94,10 +94,10 @@ module Fastlane
         end
         additional_client_info = additional_client_info.map { |k,v| { key: k, value: v } }
 
-        if retry_if_failed.nil?
-          retry_if_failed = 0
+        if retry_if_failed
+          flaky_test_attempts = 1
         else
-          retry_if_failed = 1
+          flaky_test_attempts = 0
         end
 
         if test_ios
@@ -130,7 +130,7 @@ module Fastlane
                 gcsPath: result_path
               }
             },
-            "flakyTestAttempts": retry_if_failed,
+            flakyTestAttempts: flaky_test_attempts,
             clientInfo: {
               name: PLUGIN_NAME,
               clientInfoDetails: [
@@ -165,7 +165,7 @@ module Fastlane
                 gcsPath: result_path
               }
             },
-            "flakyTestAttempts": retry_if_failed,
+            flakyTestAttempts: flaky_test_attempts,
             clientInfo: {
               name: PLUGIN_NAME,
               clientInfoDetails: [
