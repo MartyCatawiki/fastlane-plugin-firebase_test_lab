@@ -39,7 +39,7 @@ module Fastlane
         # params[:result_storage] = params[:ios_app_path]
 
         # Firebase Test Lab requires an app bundle be already on Google Cloud Storage before starting the job
-        if params[:ios_app_path].to_s.start_with?("gs://")
+        if params[:test_ios] && params[:ios_app_path].to_s.start_with?("gs://")
           # gs:// is a path on Google Cloud Storage, we do not need to re-upload the app to a different bucket
           app_gcs_link = params[:ios_app_path]
         else
@@ -47,7 +47,9 @@ module Fastlane
           if params[:skip_validation]
             UI.message("Skipping validation of app.")
           else
-            FirebaseTestLab::IosValidator.validate_ios_app(params[:ios_app_path])
+            if params[:test_ios]
+              FirebaseTestLab::IosValidator.validate_ios_app(params[:ios_app_path])
+            end  
           end
 
           # When given a local path, we upload the app bundle to Google Cloud Storage
