@@ -49,6 +49,7 @@ If you have [gcloud tool](https://cloud.google.com/sdk/gcloud/), you can run
 
 ```no-highlight
 gcloud beta firebase test ios models list
+gcloud beta firebase test android models list
 ```
 
 to get a list of supported devices and their identifiers.
@@ -57,9 +58,11 @@ Alternatively all available devices can also be seen [here](https://firebase.goo
 
 ## Actions
 
-### `firebase_test_lab_ios_xctest`
+### `firebase_test_lab_run_tests`
 
-Submit your iOS app to Firebase Test Lab and run XCTest. Refer to [this document](https://firebase.google.com/docs/test-lab/ios/command-line) for more details about Firebase Test Lab specific arguments.
+Submit your app to Firebase Test Lab and run your tests. Refer to [this document](https://firebase.google.com/docs/test-lab/) for more details about Firebase Test Lab specific arguments.
+
+Example of iOS
 
 ```ruby
 scan(
@@ -70,12 +73,12 @@ scan(
   sdk: 'iphoneos',                    # Required
   should_zip_build_products: true     # Must be true to set the correct format for Firebase Test Lab
 )
-firebase_test_lab_ios_xctest(
+firebase_test_lab_run_tests(
   gcp_project: 'your-google-project', # Your Google Cloud project name
   devices: [                          # Device(s) to run tests on
     {
-      model: 'iphonex',        # Device model ID, see gcloud command above
-      version: '11.2',         # iOS version ID, see gcloud command above
+      model: 'iphonex',               # Device model ID, see gcloud command above
+      version: '11.2',                # iOS version ID, see gcloud command above
       locale: 'en_US',                # Optional: default to en_US if not set
       orientation: 'portrait'         # Optional: default to portrait if not set
     }

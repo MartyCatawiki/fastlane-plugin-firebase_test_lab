@@ -12,7 +12,7 @@ require 'tty-spinner'
 
 module Fastlane
   module Actions
-    class FirebaseTestLabIosXctestAction < Action
+    class FirebaseTestLabRunTestsAction < Action
       DEFAULT_APP_BUNDLE_NAME = "bundle"
       PULL_RESULT_INTERVAL = 5
 
@@ -32,11 +32,6 @@ module Fastlane
 
         # The default Google Cloud Storage path we store app bundle and test results
         gcs_workfolder = generate_directory_name
-
-        # params[:ios_app_path] = "gs://test-lab-aridxvpx0y64m-n9dr7a81h5fhs/2021-01-26_15:37:21.355621_Ryfp"
-        # matrix_id = "matrix-aw8a2klawnx5a"
-        # params[:skip_validation] = true
-        # params[:result_storage] = params[:ios_app_path]
 
         # Firebase Test Lab requires an app bundle be already on Google Cloud Storage before starting the job
         if params[:test_ios] && params[:ios_app_path].to_s.start_with?("gs://")
