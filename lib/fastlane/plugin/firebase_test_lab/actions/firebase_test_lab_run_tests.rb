@@ -92,7 +92,8 @@ module Fastlane
                                           params[:timeout_sec],
                                           params[:gcp_additional_client_info],
                                           params[:xcode_version],
-                                          params[:retry_if_failed])
+                                          params[:retry_if_failed],
+                                          params[:android_test_target])
 
         # In theory, matrix_id should be available. Keep it to catch unexpected Firebase Test Lab API response
         if matrix_id.nil?
@@ -356,7 +357,7 @@ module Fastlane
       #####################################################
 
       def self.description
-        "Submit an iOS XCTest job to Firebase Test Lab"
+        "Submit an test job to Firebase Test Lab"
       end
 
       def self.available_options
@@ -368,7 +369,7 @@ module Fastlane
       end
 
       def self.is_supported?(platform)
-        return platform == :ios
+        return platform == :ios || platform == :android
       end
     end
   end

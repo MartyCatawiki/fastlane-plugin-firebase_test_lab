@@ -86,7 +86,7 @@ module Fastlane
         end
       end
 
-      def start_job(test_ios, gcp_project, app_path, test_app_path, result_path, devices, timeout_sec, additional_client_info, xcode_version, retry_if_failed)
+      def start_job(test_ios, gcp_project, app_path, test_app_path, result_path, devices, timeout_sec, additional_client_info, xcode_version, retry_if_failed, android_test_target)
         if additional_client_info.nil? 
           additional_client_info = { version: VERSION }
         else
@@ -152,7 +152,10 @@ module Fastlane
                 testApk: {
                   gcsPath: test_app_path
                 },
-                orchestratorOption: "USE_ORCHESTRATOR"
+                orchestratorOption: "USE_ORCHESTRATOR",
+                testTargets: [
+                  android_test_target
+                ]
               }
             },
             environmentMatrix: {
