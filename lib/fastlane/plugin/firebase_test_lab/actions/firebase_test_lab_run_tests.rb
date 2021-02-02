@@ -100,7 +100,7 @@ module Fastlane
           UI.abort_with_message!("No matrix ID received.")
         end
         UI.message("Matrix ID for this submission: #{matrix_id}")
-        wait_for_test_results(ftl_service, gcp_project, matrix_id, params, result_storage, params[:print_successful_test])
+        return wait_for_test_results(ftl_service, gcp_project, matrix_id, params, result_storage, params[:print_successful_test])
       end
 
       def self.upload_file(app_path, bucket_name, gcs_path, gcp_project, gcp_credential, gcp_requests_timeout)
@@ -168,13 +168,13 @@ module Fastlane
               UI.abort_with_message!("Unexpected response from Firebase test lab: No history or execution ID")
             end
             test_results = ftl_service.get_execution_steps(gcp_project, history_id, execution_id)
-            tests_successful, failureDictionary = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id, print_successful_test)
+            tests_successful, resultsDictionary = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id, print_successful_test)
             download_files(result_storage, params)
+            resultsDictionary["FTL link"] = "Go to #{firebase_console_link} for more information about this run"
             unless executions_completed && tests_successful
-              failureDictionary["FTL link"] = "Go to #{firebase_console_link} for more information about this run"
-              UI.test_failure!(failureDictionary)
+              UI.test_failure!(resultsDictionary)
             end
-            return
+            return resultsDictionary
           end
 
           # We should have caught all known states here. If the state is not one of them, this
@@ -239,7 +239,7 @@ module Fastlane
         steps = test_results["steps"]
         failures = 0
         inconclusive_runs = 0
-        failureDictionary = {}        
+        resultsDictionary = {}        
 
         UI.message("-------------------------")
         UI.message("|      TEST OUTCOME     |")
@@ -259,6 +259,8 @@ module Fastlane
 
           test_cases = ftl_service.get_execution_test_cases(gcp_project, history_id, execution_id, step_id)
 
+          totalNrOfTest = 0
+          totalNrOfSuccessfulTest = 0
           testCaseSummary = ""
           testCases = test_cases["testCases"]
           if !testCases.nil?
@@ -266,11 +268,16 @@ module Fastlane
               name = testCase["testCaseReference"]["name"]
               status = testCase["status"]
               if status.nil?
+                totalNrOfTest = totalNrOfTest + 1
+                totalNrOfSuccessfulTest = totalNrOfSuccessfulTest + 1
                 if print_successful_test
                   testCaseSummary += ":white_check_mark: " + name + "\n"
                 end
-              else
-                testCaseSummary += ":fire: " + name + "\n"
+              else 
+                if status != "skipped"
+                  totalNrOfTest = totalNrOfTest + 1
+                  testCaseSummary += ":fire: " + name + "\n"
+                end  
               end
             end
           else 
@@ -290,12 +297,18 @@ module Fastlane
           when "inconclusive"
             inconclusive_runs += 1
             UI.error("Result: #{outcome}")
-            failureDictionary[device] = testCaseSummary
           when "failure"
             failures += 1
             UI.error("Result: #{outcome}")
-            failureDictionary[device] = testCaseSummary
           end
+          totalTestRuns = "Tests run: #{totalNrOfSuccessfulTest}/#{totalNrOfTest}"
+          if totalNrOfTest > 0 && totalNrOfSuccessfulTest == totalNrOfTest
+            totalTestRuns = " :white_check_mark: #{totalTestRuns}, *100% success*.\n"
+          else
+            percentage = totalNrOfSuccessfulTest * 100 / totalNrOfTest
+            totalTestRuns = " :warning: #{totalTestRuns}, *#{percentage}% success*.\n"
+          end  
+          resultsDictionary[device + totalTestRuns] = testCaseSummary
           UI.message("For details, go to https://console.firebase.google.com/project/#{gcp_project}/testlab/" \
             "histories/#{history_id}/matrices/#{execution_id}/executions/#{step_id}")
         end
@@ -310,7 +323,7 @@ module Fastlane
         if inconclusive_runs > 0
           UI.error("😞  #{inconclusive_runs} step(s) yielded inconclusive outcomes.")
         end
-        return (failures == 0 && inconclusive_runs == 0), failureDictionary
+        return (failures == 0 && inconclusive_runs == 0), resultsDictionary
       end
 
       def self.download_files(result_storage, params)
