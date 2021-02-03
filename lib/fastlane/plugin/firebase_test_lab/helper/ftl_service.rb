@@ -258,7 +258,7 @@ module Fastlane
               .gsub("{project}", gcp_project)
               .gsub("{history_id}", history_id)
               .gsub("{execution_id}", execution_id)
-              .gsub("{step_id}", step_id)
+              .gsub("{step_id}", step_id) + "?pageSize=200"
         begin
           resp = conn.get(url) do |req|
             req.headers = @auth.apply(req.headers)
