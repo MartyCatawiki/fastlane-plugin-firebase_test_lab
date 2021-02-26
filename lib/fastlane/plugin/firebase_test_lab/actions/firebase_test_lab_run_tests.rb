@@ -170,7 +170,7 @@ module Fastlane
             test_results = ftl_service.get_execution_steps(gcp_project, history_id, execution_id)
             tests_successful, resultsDictionary = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id, print_successful_test)
             download_files(result_storage, params)
-            resultsDictionary["FTL link"] = "Go to #{firebase_console_link} for more information about this run"
+            resultsDictionary["Firebase Test Lab link"] = "Go to <#{firebase_console_link}|Firebase console> for more information about this run"
             unless executions_completed && tests_successful
               UI.test_failure!(resultsDictionary)
             end
