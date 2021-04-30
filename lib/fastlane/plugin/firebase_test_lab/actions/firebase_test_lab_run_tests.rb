@@ -14,7 +14,7 @@ module Fastlane
   module Actions
     class FirebaseTestLabRunTestsAction < Action
       DEFAULT_APP_BUNDLE_NAME = "bundle"
-      PULL_RESULT_INTERVAL = 5
+      PULL_RESULT_INTERVAL = 15
 
       RUNNING_STATES = %w(VALIDATING PENDING RUNNING)
 
@@ -135,7 +135,7 @@ module Fastlane
                 return
               end
 
-              spinner = TTY::Spinner.new("[:spinner] Waiting for results...", format: :dots)
+              spinner = TTY::Spinner.new("[:spinner]", format: :dots)
               spinner.auto_spin
             end
           end
@@ -170,6 +170,7 @@ module Fastlane
             test_results = ftl_service.get_execution_steps(gcp_project, history_id, execution_id)
             tests_successful, resultsDictionary = extract_test_results(ftl_service, test_results, gcp_project, history_id, execution_id, print_successful_test)
             download_files(result_storage, params)
+            resultsDictionary["Time started"] = Time.parse(results["timestamp"]).strftime("%H:%M UTC")
             resultsDictionary["Firebase Test Lab link"] = "Go to <#{firebase_console_link}|Firebase console> for more information about this run"
             unless executions_completed && tests_successful
               UI.test_failure!(resultsDictionary)
@@ -271,12 +272,12 @@ module Fastlane
                 totalNrOfTest = totalNrOfTest + 1
                 totalNrOfSuccessfulTest = totalNrOfSuccessfulTest + 1
                 if print_successful_test
-                  testCaseSummary += ":white_check_mark: " + name + "\n"
+                  testCaseSummary += "✅ " + name + "\n"
                 end
               else 
                 if status != "skipped"
                   totalNrOfTest = totalNrOfTest + 1
-                  testCaseSummary += ":fire: " + name + "\n"
+                  testCaseSummary += "🔥 " + name + "\n"
                 end  
               end
             end
@@ -285,8 +286,12 @@ module Fastlane
           end
           UI.message(testCaseSummary)
 
-          run_duration_sec = step["runDuration"]["seconds"] || 0
-          UI.message("Execution time: #{run_duration_sec} seconds")
+          testProcessDurationSeconds = step["testExecutionStep"]["testTiming"]["testProcessDuration"]["seconds"] || 0
+          msgTestTime = "⏳ Test: #{testProcessDurationSeconds.to_i / 60} min #{testProcessDurationSeconds.to_i % 60} sec"
+          UI.message(msgTestTime)
+          runDurationSeconds = step["runDuration"]["seconds"] || 0
+          msgTotalTime = "⌛️ Total: #{runDurationSeconds.to_i / 60} min #{runDurationSeconds.to_i % 60} sec"
+          UI.message(msgTotalTime)
 
           outcome = step["outcome"]["summary"]
           case outcome
@@ -303,12 +308,12 @@ module Fastlane
           end
           totalTestRuns = "Tests run: #{totalNrOfSuccessfulTest}/#{totalNrOfTest}"
           if totalNrOfTest > 0 && totalNrOfSuccessfulTest == totalNrOfTest
-            totalTestRuns = " :white_check_mark: #{totalTestRuns}, *100% success*.\n"
+            totalTestRuns = ":white_check_mark: #{totalTestRuns}, *100% success*."
           else
             percentage = totalNrOfSuccessfulTest * 100 / totalNrOfTest
-            totalTestRuns = " :warning: #{totalTestRuns}, *#{percentage}% success*.\n"
+            totalTestRuns = ":warning: #{totalTestRuns}, *#{percentage}% success*."
           end  
-          resultsDictionary[device + totalTestRuns] = testCaseSummary
+          resultsDictionary["#{device}"] = "#{totalTestRuns}\n#{msgTestTime} #{msgTotalTime}.\n#{testCaseSummary}"
           UI.message("For details, go to https://console.firebase.google.com/project/#{gcp_project}/testlab/" \
             "histories/#{history_id}/matrices/#{execution_id}/executions/#{step_id}")
         end
