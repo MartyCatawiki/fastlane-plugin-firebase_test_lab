@@ -308,7 +308,7 @@ module Fastlane
           end
           totalTestRuns = "Tests run: #{totalNrOfSuccessfulTest}/#{totalNrOfTest}"
           if totalNrOfTest > 0 && totalNrOfSuccessfulTest == totalNrOfTest
-            totalTestRuns = ":white_check_mark: #{totalTestRuns}, *100% success*."
+            totalTestRuns = "✅ #{totalTestRuns}, *100% success*."
           else
             percentage = totalNrOfSuccessfulTest * 100 / totalNrOfTest
             totalTestRuns = ":warning: #{totalTestRuns}, *#{percentage}% success*."
